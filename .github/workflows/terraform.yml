@@ -72,7 +72,7 @@ jobs:
 
   terrafom-apply:
     runs-on: ubuntu-latest
-    needs: terraform
+    needs: terraform-plan
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
