@@ -53,10 +53,13 @@ jobs:
           echo "Selected environment: $ENV"
           echo "env=$ENV" >> $GITHUB_ENV
 
+      # Ensure we're in the correct environment directory and initialize the backend
       - name: Initialize Terraform for selected environment
         run: |
+          cd infra/terraform/env/${{ env.env }}
           terraform init -backend-config="path=infra/terraform/env/${{ env.env }}/backend.tf"
 
+      # Select or create the Terraform workspace for the environment
       - name: Terraform Plan for ${{ env.env }}
         run: |
           terraform workspace select -or-create ${{ env.env }}
