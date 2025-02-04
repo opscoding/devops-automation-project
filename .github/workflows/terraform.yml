@@ -59,7 +59,7 @@ jobs:
 
       - name: Terraform Plan for ${{ env.env }}
         run: |
-          terraform workspace select ${{ env.env }} || terraform workspace new ${{ env.env }}
+          terraform workspace select ${{ env.env }} -or-create || terraform workspace new ${{ env.env }}
           terraform plan -var-file=infra/terraform/env/${{ env.env }}/terraform.tfvars -out=tfplan
 
       # Optionally uploads the plan to GitHub artifacts so that it can be downloaded or reviewed.
