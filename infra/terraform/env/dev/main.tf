@@ -1,7 +1,6 @@
 # Provider configuration for the dev environment (using the same AWS provider here)
 provider "aws" {
-  region  = "us-east-1"
-  profile = "default"
+  region = "us-east-1"
 
 }
 
