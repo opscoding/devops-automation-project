@@ -1,0 +1,94 @@
+You can define environments within GitHub for better management of approvals:
+	1.	Go to your repository’s Settings > Environments.
+	2.	Add environments such as dev, staging, and prod.
+	3.	For each environment, you can require manual approval before the job runs, linking to the steps in the workflow.
+
+
+name: Terraform Workflow
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+      # This step checks out the code from the GitHub repository so that Terraform can access it.
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # This sets up Terraform using the hashicorp/setup-terraform action.
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.5
+
+      # This step caches the Terraform provider plugins to speed up the pipeline by avoiding downloading the plugins on each run.
+      - name: Cache Terraform providers
+        uses: actions/cache@v3
+        with:
+          path: ~/.terraform.d/plugins
+          key: ${{ runner.os }}-terraform-${{ hashFiles('**/*.tf') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-
+
+      # This checks if the current branch is main. If it is the main branch, the script will select the prd workspace. For all other branches (like dev or feature branches), it will select the dev workspace
+      - name: Select the environment workspace
+        run: |
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            export ENV="prod"
+          elif [[ "${GITHUB_REF}" == "refs/heads/staging" ]]; then
+            export ENV="staging"
+          else
+            export ENV="dev"
+          fi
+          echo "Selected environment: $ENV"
+          echo "env=$ENV" >> $GITHUB_ENV
+
+      - name: Initialize Terraform for selected environment
+        run: |
+          terraform init -backend-config="path=infra/terraform/env/${{ env.env }}/backend.tf"
+
+      - name: Terraform Plan for ${{ env.env }}
+        run: |
+          terraform workspace select ${{ env.env }} || terraform workspace new ${{ env.env }}
+          terraform plan -var-file=infra/terraform/env/${{ env.env }}/terraform.tfvars -out=tfplan
+
+      # Optionally uploads the plan to GitHub artifacts so that it can be downloaded or reviewed.
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfplan
+          path: tfplan
+
+
+  apply:
+    runs-on: ubuntu-latest
+    needs: terraform
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Manual approval for applying Terraform changes
+      - name: Await manual approval to apply Terraform changes
+        uses: peter-evans/manual-approval-action@v2
+        with:
+          approval_message: "Approve to apply Terraform changes for ${{ env.env }} environment"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Terraform Apply (executed after manual approval)
+      - name: Terraform Apply for ${{ env.env }}
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve tfplan
+        env:
+          TF_VAR_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          TF_VAR_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
