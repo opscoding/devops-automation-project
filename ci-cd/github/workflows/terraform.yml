@@ -1,7 +1,7 @@
-You can define environments within GitHub for better management of approvals:
-	1.	Go to your repository’s Settings > Environments.
-	2.	Add environments such as dev, staging, and prod.
-	3.	For each environment, you can require manual approval before the job runs, linking to the steps in the workflow.
+# You can define environments within GitHub for better management of approvals:
+# Go to your repository’s Settings > Environments.
+# Add environments such as dev, staging, and prod.
+# For each environment, you can require manual approval before the job runs, linking to the steps in the workflow.
 
 
 name: Terraform Workflow
