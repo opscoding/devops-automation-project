@@ -88,7 +88,7 @@ jobs:
 
       # Manual approval for applying Terraform changes
       - name: Await manual approval to apply Terraform changes
-        uses: peter-evans/manual-approval-action@v2
+        uses: gh-actions/approval@v1
         with:
           approval_message: "Approve to apply Terraform changes for ${{ env.env }} environment"
         env:
