@@ -86,14 +86,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Manual approval for applying Terraform changes
-      - name: Await manual approval to apply Terraform changes
-        uses: gh-actions/approval@v1
-        with:
-          approval_message: "Approve to apply Terraform changes for ${{ env.env }} environment"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       # Terraform Apply (executed after manual approval)
       - name: Terraform Apply for ${{ env.env }}
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
