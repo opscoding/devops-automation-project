@@ -58,6 +58,9 @@ jobs:
         run: |
           cd infra/terraform/env/${{ env.env }}
           terraform init
+        env:
+          TF_VAR_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          TF_VAR_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       # Select or create the Terraform workspace for the environment
       - name: Terraform Plan for ${{ env.env }}
@@ -65,6 +68,9 @@ jobs:
           terraform workspace select -or-create ${{ env.env }}
           cd infra/terraform/env/${{ env.env }}
           terraform plan -out=tfplan
+        env:
+          TF_VAR_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          TF_VAR_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       # Optionally uploads the plan to GitHub artifacts so that it can be downloaded or reviewed.
       - name: Upload Terraform Plan
