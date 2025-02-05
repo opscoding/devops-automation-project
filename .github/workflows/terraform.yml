@@ -98,9 +98,9 @@ jobs:
           path: infra/terraform/env/${{ env.env }}
 
     # Initialize Terraform to ensure the environment is ready for apply
-    - name: Initialize Terraform for selected environment
-      working-directory: infra/terraform/env/${{ env.env }}
-      run: terraform init
+      - name: Initialize Terraform for selected environment
+        working-directory: infra/terraform/env/${{ env.env }}
+        run: terraform init
 
       # Terraform Apply (executed after manual approval)
       - name: Terraform Apply for ${{ env.env }}
