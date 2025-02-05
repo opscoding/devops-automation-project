@@ -66,9 +66,9 @@ jobs:
         working-directory: infra/terraform/env/${{ env.env }}
         run: |
           terraform init \
-            -backend-config="$AWS_S3_TF_BUCKET" \
+            -backend-config="bucket=$AWS_S3_TF_BUCKET" \
             -backend-config="key=$AWS_S3_TF_KEY_BUCKET/${{ env.env }}/terraform.tfstate" \
-            -backend-config="$AWS_S3_TF_BUCKET_REGION"
+            -backend-config="region=$AWS_S3_TF_BUCKET_REGION"
 
       # Select or create the Terraform workspace for the environment
 
