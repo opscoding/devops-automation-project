@@ -36,7 +36,7 @@ jobs:
       - name: Initialize Terraform for selected environment
         working-directory: infra/terraform/env/dev
         run: |
-          terraform init -backend-config="backend.tf"
+          terraform init
 
       # Ensure the lock file exists before caching
       - name: Verify Terraform lock file
