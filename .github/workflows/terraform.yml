@@ -20,9 +20,6 @@ env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-  AWS_S3_TF_BUCKET: "lessandro-tf-state-file"
-  AWS_S3_TF_KEY_BUCKET: "devops-automation-project"
-  AWS_S3_TF_BUCKET_REGION: "region=us-east-1"
 
 jobs:
   terraform-plan:
@@ -64,11 +61,7 @@ jobs:
       # Ensure we're in the correct environment directory and initialize the backend
       - name: Initialize Terraform for selected environment
         working-directory: infra/terraform/env/${{ env.env }}
-        run: |
-          terraform init \
-            -backend-config="bucket=$AWS_S3_TF_BUCKET" \
-            -backend-config="key=$AWS_S3_TF_KEY_BUCKET/${{ env.env }}/terraform.tfstate" \
-            -backend-config="region=$AWS_S3_TF_BUCKET_REGION"
+        run: terraform init
 
       # Select or create the Terraform workspace for the environment
 
