@@ -36,26 +36,23 @@ jobs:
         with:
           terraform_version: 1.10.5
 
+      - name: Configure Terraform plugin cache
+        run: |
+          echo "TF_PLUGIN_CACHE_DIR=$HOME/.terraform.d/plugin-cache" >>"$GITHUB_ENV"
+          mkdir --parents "$HOME/.terraform.d/plugin-cache"
+
+      - name: Cache Terraform
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.terraform.d/plugin-cache
+          key: terraform-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: |
+            terraform-${{ runner.os }}-
+
       - name: Initialize Terraform for selected environment
         run: |
           terraform init
-
-      # Ensure the lock file exists before caching
-      - name: Verify Terraform lock file
-        run: |
-          if [ ! -f "terraform.lock.hcl" ]; then
-            echo "Error: terraform.lock.hcl does not exist!"
-            exit 1
-          fi
-
-      # Cache the Terraform lock file
-      - name: Cache Terraform lock file
-        uses: actions/cache@v3
-        with:
-          path: terraform.lock.hcl
-          key: terraform-lock-${{ hashFiles('terraform.lock.hcl') }}
-          restore-keys: |
-            terraform-lock-
 
   # terraform-plan:
   #   runs-on: ubuntu-latest
