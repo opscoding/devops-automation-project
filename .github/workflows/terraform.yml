@@ -60,15 +60,15 @@ jobs:
 
       # Ensure we're in the correct environment directory and initialize the backend
       - name: Initialize Terraform for selected environment
-        run: |
-          cd infra/terraform/env/${{ env.env }}
-          terraform init
+        working-directory: infra/terraform/env/${{ env.env }}
+        run: terraform init
 
       # Select or create the Terraform workspace for the environment
+
       - name: Terraform Plan for ${{ env.env }}
+        working-directory: infra/terraform/env/${{ env.env }}
         run: |
           terraform workspace select -or-create ${{ env.env }}
-          cd infra/terraform/env/${{ env.env }}
           terraform plan -out=tfplan
 
       # Optionally uploads the plan to GitHub artifacts so that it can be downloaded or reviewed.
@@ -76,7 +76,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tfplan
-          path: tfplan
+          path: infra/terraform/env/${{ env.env }}/tfplan
 
 
   terrafom-apply:
@@ -86,7 +86,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: infra/terraform/env/${{ env.env }}
+
       # Terraform Apply (executed after manual approval)
       - name: Terraform Apply for ${{ env.env }}
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        working-directory: infra/terraform/env/${{ env.env }}
         run: terraform apply -auto-approve tfplan
