@@ -24,6 +24,9 @@ env:
 jobs:
   terraform-init:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform/env/dev
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -34,13 +37,11 @@ jobs:
           terraform_version: 1.10.5
 
       - name: Initialize Terraform for selected environment
-        working-directory: infra/terraform/env/dev
         run: |
           terraform init
 
       # Ensure the lock file exists before caching
       - name: Verify Terraform lock file
-        working-directory: infra/terraform/env/dev
         run: |
           if [ ! -f "terraform.lock.hcl" ]; then
             echo "Error: terraform.lock.hcl does not exist!"
@@ -50,7 +51,6 @@ jobs:
       # Cache the Terraform lock file
       - name: Cache Terraform lock file
         uses: actions/cache@v3
-        working-directory: infra/terraform/env/dev
         with:
           path: terraform.lock.hcl
           key: terraform-lock-${{ hashFiles('terraform.lock.hcl') }}
