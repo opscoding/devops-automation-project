@@ -82,6 +82,7 @@ jobs:
   terrafom-apply:
     runs-on: ubuntu-latest
     needs: terraform-plan
+    environment: ${{ env.env }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -96,5 +97,3 @@ jobs:
       - name: Terraform Apply for ${{ env.env }}
         working-directory: infra/terraform/env/${{ env.env }}
         run: terraform apply -auto-approve tfplan
-        environment:
-          name: ${{ env.env }}
