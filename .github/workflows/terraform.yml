@@ -49,8 +49,8 @@ jobs:
 
       # Cache the Terraform lock file
       - name: Cache Terraform lock file
-        working-directory: infra/terraform/env/dev
         uses: actions/cache@v3
+        working-directory: infra/terraform/env/dev
         with:
           path: terraform.lock.hcl
           key: terraform-lock-${{ hashFiles('terraform.lock.hcl') }}
