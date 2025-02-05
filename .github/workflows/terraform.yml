@@ -40,6 +40,7 @@ jobs:
 
       # Ensure the lock file exists before caching
       - name: Verify Terraform lock file
+        working-directory: infra/terraform/env/dev
         run: |
           if [ ! -f "terraform.lock.hcl" ]; then
             echo "Error: terraform.lock.hcl does not exist!"
@@ -48,6 +49,7 @@ jobs:
 
       # Cache the Terraform lock file
       - name: Cache Terraform lock file
+        working-directory: infra/terraform/env/dev
         uses: actions/cache@v3
         with:
           path: terraform.lock.hcl
