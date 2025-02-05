@@ -69,9 +69,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-terraform-lock-
 
-      - name: Terraform Plan
-        run: terraform plan
-
       # This step caches the Terraform provider plugins to speed up the pipeline by avoiding downloading the plugins on each run.
       - name: Cache Terraform providers
         uses: actions/cache@v3
