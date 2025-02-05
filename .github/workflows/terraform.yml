@@ -1,5 +1,5 @@
 # You can define environments within GitHub for better management of approvals:
-# Go to your repository’s Settings > Environments.
+#Go to your repository’s Settings > Environments.
 # Add environments such as dev, staging, and prod.
 # For each environment, you can require manual approval before the job runs, linking to the steps in the workflow.
 
@@ -16,79 +16,142 @@ on:
       - main
       - dev
 
-jobs:
-  terraform-plan:
-    runs-on: ubuntu-latest
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
 
+jobs:
+  terraform-init:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform/env/dev
     steps:
-      # This step checks out the code from the GitHub repository so that Terraform can access it.
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # This sets up Terraform using the hashicorp/setup-terraform action.
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.10.5
 
-      # This step caches the Terraform provider plugins to speed up the pipeline by avoiding downloading the plugins on each run.
-      - name: Cache Terraform providers
-        uses: actions/cache@v3
-        with:
-          path: ~/.terraform.d/plugins
-          key: ${{ runner.os }}-terraform-${{ hashFiles('**/*.tf') }}
-          restore-keys: |
-            ${{ runner.os }}-terraform-
-
-      # This checks if the current branch is main. If it is the main branch, the script will select the prd workspace. For all other branches (like dev or feature branches), it will select the dev workspace
-      - name: Select the environment workspace
+      - name: Configure Terraform plugin cache
         run: |
-          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
-            export ENV="prod"
-          elif [[ "${GITHUB_REF}" == "refs/heads/staging" ]]; then
-            export ENV="staging"
-          else
-            export ENV="dev"
-          fi
-          echo "Selected environment: $ENV"
-          echo "env=$ENV" >> $GITHUB_ENV
+          echo "TF_PLUGIN_CACHE_DIR=$HOME/.terraform.d/plugin-cache" >>"$GITHUB_ENV"
+          mkdir --parents "$HOME/.terraform.d/plugin-cache"
+
+      - name: Cache Terraform
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.terraform.d/plugin-cache
+          key: terraform-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: |
+            terraform-${{ runner.os }}-
 
       - name: Initialize Terraform for selected environment
         run: |
-          terraform init -backend-config="path=infra/terraform/env/${{ env.env }}/backend.tf"
+          terraform init
 
-      - name: Terraform Plan for ${{ env.env }}
-        run: |
-          terraform workspace select ${{ env.env }} || terraform workspace new ${{ env.env }}
-          terraform plan -var-file=infra/terraform/env/${{ env.env }}/terraform.tfvars -out=tfplan
+  # terraform-plan:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     # This step checks out the code from the GitHub repository so that Terraform can access it.
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
 
-      # Optionally uploads the plan to GitHub artifacts so that it can be downloaded or reviewed.
-      - name: Upload Terraform Plan
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan
-          path: tfplan
+  #     # This sets up Terraform using the hashicorp/setup-terraform action.
+  #     - name: Set up Terraform
+  #       uses: hashicorp/setup-terraform@v2
+  #       with:
+  #         terraform_version: 1.10.5
 
+  #     # Restore the cached lock file
+  #     - name: Restore Terraform lock file
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: terraform.lock.hcl
+  #         key: ${{ runner.os }}-terraform-lock-${{ hashFiles('**/terraform.lock.hcl') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-terraform-lock-
 
-  terrafom-apply:
-    runs-on: ubuntu-latest
-    needs: terraform-plan
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+  #     # This step caches the Terraform provider plugins to speed up the pipeline by avoiding downloading the plugins on each run.
+  #     - name: Cache Terraform providers
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: ~/.terraform.d/plugins
+  #         key: ${{ runner.os }}-terraform-${{ hashFiles('**/*.tf') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-terraform-
 
-      # Manual approval for applying Terraform changes
-      - name: Await manual approval to apply Terraform changes
-        uses: peter-evans/manual-approval-action@v2
-        with:
-          approval_message: "Approve to apply Terraform changes for ${{ env.env }} environment"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #     # This checks if the current branch is main. If it is the main branch, the script will select the prd workspace. For all other branches (like dev or feature branches), it will select the dev workspace
+  #     - name: Select the environment workspace
+  #       run: |
+  #         if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+  #           export ENV="prod"
+  #         elif [[ "${GITHUB_REF}" == "refs/heads/staging" ]]; then
+  #           export ENV="staging"
+  #         else
+  #           export ENV="dev"
+  #         fi
+  #         echo "Selected environment: $ENV"
+  #         echo "env=$ENV" >> $GITHUB_ENV
 
-      # Terraform Apply (executed after manual approval)
-      - name: Terraform Apply for ${{ env.env }}
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve tfplan
-        env:
-          TF_VAR_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          TF_VAR_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #     # Ensure we're in the correct environment directory and initialize the backend
+  #     - name: Initialize Terraform for selected environment
+  #       working-directory: infra/terraform/env/${{ env.env }}
+  #       run: terraform init
+
+  #     # Select or create the Terraform workspace for the environment
+  #     - name: Terraform Plan for ${{ env.env }}
+  #       working-directory: infra/terraform/env/${{ env.env }}
+  #       run: |
+  #         terraform workspace select -or-create ${{ env.env }}
+  #         terraform plan -out=tfplan
+
+  #     # Optionally uploads the plan to GitHub artifacts so that it can be downloaded or reviewed.
+  #     - name: Upload Terraform Plan
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: tfplan
+  #         path: infra/terraform/env/${{ env.env }}/tfplan
+
+  # terrafom-apply:
+  #   runs-on: ubuntu-latest
+  #   needs: terraform-plan
+  #   environment: review
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
+
+  #     # This sets up Terraform using the hashicorp/setup-terraform action.
+  #     - name: Set up Terraform
+  #       uses: hashicorp/setup-terraform@v2
+  #       with:
+  #         terraform_version: 1.10.5
+
+  #     # Restore the cached lock file
+  #     - name: Restore Terraform lock file
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: terraform.lock.hcl
+  #         key: ${{ runner.os }}-terraform-lock-${{ hashFiles('**/terraform.lock.hcl') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-terraform-lock-
+
+  #     - name: Download Terraform Plan
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: tfplan
+  #         path: infra/terraform/env/${{ env.env }}
+
+  #   # Initialize Terraform to ensure the environment is ready for apply
+  #     - name: Initialize Terraform for selected environment
+  #       working-directory: infra/terraform/env/${{ env.env }}
+  #       run: terraform init
+
+  #     # Terraform Apply (executed after manual approval)
+  #     - name: Terraform Apply for ${{ env.env }}
+  #       working-directory: infra/terraform/env/${{ env.env }}
+  #       run: terraform apply -auto-approve tfplan
