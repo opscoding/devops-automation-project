@@ -32,16 +32,26 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.10.5
+      # Ensure Terraform lock file is generated
+      - name: Initialize Terraform
+        run: terraform init
 
-      # Cache the terraform.lock.hcl file for later use
+      # Ensure the lock file exists before caching
+      - name: Verify Terraform lock file
+        run: |
+          if [ ! -f "terraform.lock.hcl" ]; then
+            echo "Error: terraform.lock.hcl does not exist!"
+            exit 1
+          fi
+
+      # Cache the Terraform lock file
       - name: Cache Terraform lock file
         uses: actions/cache@v3
         with:
           path: terraform.lock.hcl
-          key: ${{ runner.os }}-terraform-lock-${{ hashFiles('**/terraform.lock.hcl') }}
+          key: terraform-lock-${{ hashFiles('terraform.lock.hcl') }}
           restore-keys: |
-            ${{ runner.os }}-terraform-lock-
-
+            terraform-lock-
 
   # terraform-plan:
   #   runs-on: ubuntu-latest
