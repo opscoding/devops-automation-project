@@ -22,6 +22,31 @@ env:
   AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
 
 jobs:
+  terraform-init:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.5
+
+      # Initialize Terraform and create the lock file
+      - name: Initialize Terraform
+        run: terraform init
+
+      # Cache the terraform.lock.hcl file for later use
+      - name: Cache Terraform lock file
+        uses: actions/cache@v3
+        with:
+          path: terraform.lock.hcl
+          key: ${{ runner.os }}-terraform-lock-${{ hashFiles('**/terraform.lock.hcl') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-lock-
+
+
   terraform-plan:
     runs-on: ubuntu-latest
     steps:
@@ -34,6 +59,18 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.10.5
+
+      # Restore the cached lock file
+      - name: Restore Terraform lock file
+        uses: actions/cache@v3
+        with:
+          path: terraform.lock.hcl
+          key: ${{ runner.os }}-terraform-lock-${{ hashFiles('**/terraform.lock.hcl') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-lock-
+
+      - name: Terraform Plan
+        run: terraform plan
 
       # This step caches the Terraform provider plugins to speed up the pipeline by avoiding downloading the plugins on each run.
       - name: Cache Terraform providers
@@ -63,7 +100,6 @@ jobs:
         run: terraform init
 
       # Select or create the Terraform workspace for the environment
-
       - name: Terraform Plan for ${{ env.env }}
         working-directory: infra/terraform/env/${{ env.env }}
         run: |
@@ -90,6 +126,15 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.10.5
+
+      # Restore the cached lock file
+      - name: Restore Terraform lock file
+        uses: actions/cache@v3
+        with:
+          path: terraform.lock.hcl
+          key: ${{ runner.os }}-terraform-lock-${{ hashFiles('**/terraform.lock.hcl') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-lock-
 
       - name: Download Terraform Plan
         uses: actions/download-artifact@v4
